@@ -18,26 +18,50 @@
 #' sim_fishery(fish = fish, fleet = fleet,...)
 #' }
 #'
-sim_fishery <-
+sim_fishery_az <-
   function(fish,
            fleet,
            manager,
-           num_patches = 10,
-           sim_years = 1,
-           burn_years = 25,
-           crashed_pop = 1e-3,
-           random_mpas = F,
+           num_patches, #10,
+           sim_years, #1,
+           burn_years,
+           crashed_pop = 1e-3,    # What is this?
+           random_mpas,
            enviro = NA,
            enviro_strength = 1,
-           rec_driver = "stochastic",
-           est_msy = F,
+           rec_driver,
+           est_msy,
            time_step,
            max_window = 10,
            min_size = 1,
            mpa_habfactor = 1,
-           sprinkler = FALSE,
-           keep_burn = FALSE,
-           tune_costs = FALSE) {
+           sprinkler,
+           keep_burn,
+           tune_costs,
+           adult_distance,
+           larv_distance) {
+# # #
+#     fish = fish
+#     fleet = fleet
+#     manager = create_manager(mpa_size = 0, year_mpa = 5)
+#     num_patches = 149
+#     sim_years = 10
+#     burn_years = 5
+#     time_step = fish$time_step
+#     est_msy = FALSE
+#     random_mpas =TRUE
+#     min_size = 0.05
+#     mpa_habfactor = 1
+#     sprinkler = FALSE
+#     keep_burn = FALSE
+#     adult_distance = adult_distance
+#     larv_distance = larve_distance
+#     rec_driver = "stochastic"
+#     tune_costs = FALSE
+
+    colnames(adult_distance)<-c("X","from","to","distance")
+
+    colnames(larv_distance)<-c("X","from","to","distance")
     msy <- NA
 
     p_msy <- NA
@@ -47,133 +71,133 @@ sim_fishery <-
     max_r_msy <-  NA
 
     b0 <- NA
-
+# What is this doing
     if (sprinkler == FALSE & mpa_habfactor == 1){
       burn_years <- 1
     }
 
-    if (est_msy == T) {
-      e_msy_guess <- fish$m / fleet$q
-
-      tol <- 100
-
-      lower <- 0
-
-      upper <- e_msy_guess * 3
-
-      golden <- (sqrt(5) - 1) / 2
-
-      best <- 1000
-
-      delta_best <- 100
-
-      counter <-  0
-
-      while (delta_best > tol | counter < 20) {
-        counter <- counter + 1
-
-        constant <- (1 - golden) * (upper - lower)
-
-        x1 <- lower + constant
-
-        x2 <- upper - constant
-
-        yield_1 <-
-          estimate_msy(x1,
-                       fish = fish,
-                       fleet = fleet,
-                       num_patches = 1)
-
-        yield_2 <-
-          estimate_msy(x2,
-                       fish = fish,
-                       fleet = fleet,
-                       num_patches = 1)
-
-        delta_best <-  (best -  min(yield_1, yield_2)) ^ 2
-
-        best <- min(yield_1, yield_2)
-
-        if (yield_1 < yield_2) {
-          lower <- lower
-
-          upper <- x2
-        } else{
-          lower <- x1
-
-          upper <- upper
-
-        }
-
-
-      } # close golden while
-
-
-      msy_foo <- function(seed, lower, upper, fish, fleet) {
-        msy_fit <-
-          nlminb(
-            mean(c(lower, upper)),
-            estimate_msy,
-            fish = fish,
-            fleet = fleet,
-            lower = 0,
-            seed = seed,
-            num_patches = 1
-          )
-
-        out <- list()
-
-        out$e_msy <- msy_fit$par
-
-        out$msy <- -msy_fit$objective
-
-        ref_points <-
-          estimate_msy(
-            out$e_msy,
-            fish = fish,
-            fleet = fleet,
-            use = "other",
-            seed = seed
-          )
-
-        out$b_msy <- ref_points$b_msy
-
-        out$r_msy <- ref_points$r_msy
-
-        return(out)
-
-      } # close msy foo
-
-      msy_ests <-
-        map(
-          sample(1:10000, 1, replace = F),
-          msy_foo,
-          fish = fish,
-          fleet = fleet,
-          lower = lower,
-          upper = upper
-        )
-
-      max_r_msy <- max(map_dbl(msy_ests, "r_msy"))
-
-      e_msy <- mean(map_dbl(msy_ests, "e_msy"))
-
-      fleet$e_msy <- e_msy
-
-      msy <- mean(map_dbl(msy_ests, "msy"))
-
-      fish$msy <- msy
-
-    } # close if estimate msy
+    # if (est_msy == T) {
+    #   e_msy_guess <- fish$m / fleet$q
+    #
+    #   tol <- 100
+    #
+    #   lower <- 0
+    #
+    #   upper <- e_msy_guess * 3
+    #
+    #   golden <- (sqrt(5) - 1) / 2
+    #
+    #   best <- 1000
+    #
+    #   delta_best <- 100
+    #
+    #   counter <-  0
+    #
+    #   while (delta_best > tol | counter < 20) {
+    #     counter <- counter + 1
+    #
+    #     constant <- (1 - golden) * (upper - lower)
+    #
+    #     x1 <- lower + constant
+    #
+    #     x2 <- upper - constant
+    #
+    #     yield_1 <-
+    #       estimate_msy(x1,
+    #                    fish = fish,
+    #                    fleet = fleet,
+    #                    num_patches = 1)
+    #
+    #     yield_2 <-
+    #       estimate_msy(x2,
+    #                    fish = fish,
+    #                    fleet = fleet,
+    #                    num_patches = 1)
+    #
+    #     delta_best <-  (best -  min(yield_1, yield_2)) ^ 2
+    #
+    #     best <- min(yield_1, yield_2)
+    #
+    #     if (yield_1 < yield_2) {
+    #       lower <- lower
+    #
+    #       upper <- x2
+    #     } else{
+    #       lower <- x1
+    #
+    #       upper <- upper
+    #
+    #     }
+    #
+    #
+    #   } # close golden while
+    #
+    #
+    #   msy_foo <- function(seed, lower, upper, fish, fleet) {
+    #     msy_fit <-
+    #       nlminb(
+    #         mean(c(lower, upper)),
+    #         estimate_msy,
+    #         fish = fish,
+    #         fleet = fleet,
+    #         lower = 0,
+    #         seed = seed,
+    #         num_patches = 1
+    #       )
+    #
+    #     out <- list()
+    #
+    #     out$e_msy <- msy_fit$par
+    #
+    #     out$msy <- -msy_fit$objective
+    #
+    #     ref_points <-
+    #       estimate_msy(
+    #         out$e_msy,
+    #         fish = fish,
+    #         fleet = fleet,
+    #         use = "other",
+    #         seed = seed
+    #       )
+    #
+    #     out$b_msy <- ref_points$b_msy
+    #
+    #     out$r_msy <- ref_points$r_msy
+    #
+    #     return(out)
+    #
+    #   } # close msy foo
+    #
+    #   msy_ests <-
+    #     map(
+    #       sample(1:10000, 1, replace = F),
+    #       msy_foo,
+    #       fish = fish,
+    #       fleet = fleet,
+    #       lower = lower,
+    #       upper = upper
+    #     )
+    #
+    #   max_r_msy <- max(map_dbl(msy_ests, "r_msy"))
+    #
+    #   e_msy <- mean(map_dbl(msy_ests, "e_msy"))
+    #
+    #   fleet$e_msy <- e_msy
+    #
+    #   msy <- mean(map_dbl(msy_ests, "msy"))
+    #
+    #   fish$msy <- msy
+    #
+    # } # close if estimate msy
 
 
     sim_years <- burn_years + sim_years
-
+## Why ?
     if (fleet$fleet_model == "supplied-catch") {
       sim_years <- sim_years + 1
     }
 
-
+## creates empty data frame with number,ssb,etc at age for each cell every year and indicates whether a cell is an MPA
     pop <-
       expand.grid(
         year = 1:sim_years,
@@ -192,14 +216,14 @@ sim_fishery <-
         cost = NA
       ) %>%
       dplyr::as_data_frame() %>%
-      arrange(year, patch, age)
+      dplyr::arrange(year, patch, age)
 
-
+# creates vector of effort and F per year
     effort <- vector(mode = "double", length = sim_years)
 
     f <- vector(mode = "double", length = sim_years)
 
-
+### defines recruitement driver
     if (rec_driver == "stochastic") {
       # rec_devs <-
       #   rnorm(
@@ -228,7 +252,9 @@ sim_fishery <-
               mean = enviro_strength * enviro,
               sd = fish$sigma_r)
     }
+### end recruitment driver
 
+    #What is this? what are effort deviates?
     effort_devs <-
       rnorm(sim_years,
             mean = 0,
@@ -240,7 +266,7 @@ sim_fishery <-
     }
 
     # mpa_locations <- -1
-
+### This determines which cells will be MPAs
     prop_mpas <- round(num_patches * manager$mpa_size)
 
     if (random_mpas == T & prop_mpas > 0) {
@@ -281,9 +307,10 @@ sim_fishery <-
       }
     }
 
-
-    habitat <- rep(1, num_patches)
-
+# Read in habitat (this should be predicted relative density plot)
+    habitat <- rep(0.5, num_patches) #raster("/Users/lennonthomas/Box Sync/SFG Centralized Resources/Projects/BPC/Azores/data/bsb_model/habitat/adult_habitat.tif")
+   # habitat[habitat==0]<-NA
+   # #Make habitat that is in MPA better
     habitat[mpa_locations]  <- mpa_habfactor
 
     if (prop_mpas == 0){ # in case you want to simulate MPA habitat but without the MPAs
@@ -378,12 +405,18 @@ sim_fishery <-
 
     pop$numbers[pop$year == 1] <- rep(n0_at_age, num_patches)
 
-    if (fleet$cost_function == "distance from port") {
+distance_to_shore<-read.csv(paste0(boxdir,runname,"/distance_to_shore.csv"))
+
+colnames(distance_to_shore)<-c("patch","cell_no","distance")
+
+
+    if (fleet$cost_function == "distance to port") {
       cost_frame <-
         expand.grid(year = 1:sim_years, patch = 1:num_patches) %>%
         dplyr::as_data_frame() %>%
         dplyr::left_join(cost_frame, by = "year") %>%
-        dplyr::mutate(cost = cost * (1 + fleet$cost_slope * (patch - 1)))
+        dplyr::left_join(distance_to_shore, by="patch") %>%
+        dplyr::mutate(cost = cost * (1 + fleet$cost_slope * distance))#(patch - 1)))
 
       pop <- pop %>%
         dplyr::select(-cost) %>%
@@ -417,22 +450,34 @@ sim_fishery <-
     #   ) %>%
     #   group_by(source) %>%
     #   mutate(prob_move = prob / sum(prob))
+#num_patches<- 2021   # 10#
 
-    adult_move_grid <-
-      expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
-      as.data.frame() %>%
-      dplyr::mutate(distance = purrr::map2_dbl(from, to, ~ min(
-        c(abs(.x - .y),
-          .x + num_patches - .y,
-          num_patches - .x + .y)
-      ))) %>%
-      dplyr::mutate(movement = ifelse(
-        is.finite(dnorm(distance, 0, fish$adult_movement)),
-        dnorm(distance, 0, fish$adult_movement),
-        1
-      ))  %>%
-      group_by(from) %>%
-      dplyr::mutate(prob_move = movement / sum(movement))
+   #    expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
+  #    as.data.frame() %>%
+  #    dplyr::mutate(distance = purrr::map2_dbl(from, to, ~ min(
+   #     c(abs(.x - .y),
+  #        .x + num_patches - .y,
+  #        num_patches - .x + .y)
+  #    ))) %>%
+adult_distance<-adult_distance %>%
+  mutate(rounded_dist=round(dist,0))
+
+
+adult_move_grid <- adult_distance %>%
+#See 'movement' script for distance calc of adult_move_grid
+  dplyr::mutate(movement = ifelse(
+    is.finite(dnorm(rounded_dist, 0, fish$adult_movement)),
+    dnorm(rounded_dist, 0, fish$adult_movement),
+    1
+  ))  %>%
+  group_by(from) %>%
+  dplyr::mutate(prob_move = movement / sum(movement))
+
+# This should be one and it's not!
+test<-adult_move_grid %>%
+      group_by(from)%>%
+  summarise(total=sum(prob_move))
+
 
     adult_move_matrix <- adult_move_grid %>%
       ungroup() %>%
@@ -440,38 +485,39 @@ sim_fishery <-
       spread(to, prob_move) %>%
       dplyr:: select(-from) %>%
       as.matrix()
+#colnames(adult_move_matrix)<-seq(1:149)
 
-    larval_move_grid <-
-      expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
-      as.data.frame() %>%
-      dplyr::mutate(distance = purrr::map2_dbl(from, to, ~ min(
-        c(abs(.x - .y),
-          .x + num_patches - .y,
-          num_patches - .x + .y)
-      ))) %>%
-      dplyr::mutate(
-        larval_movement = ifelse(
-          from %in% mpa_locations &
-            sprinkler != FALSE,
-          fish$larval_movement * sprinkler,
-          fish$larval_movement
-        )
-      )
-
-
-    larval_move_grid <-  larval_move_grid %>%
-      dplyr::mutate(movement = ifelse(is.finite(
-        dnorm(distance, 0, fish$larval_movement)
-      ), dnorm(distance, 0, larval_movement), 1))  %>%
-      group_by(from) %>%
-      dplyr::mutate(prob_move = movement / sum(movement))
-
-    larval_move_matrix <- larval_move_grid %>%
-      ungroup() %>%
-      dplyr::select(from, to, prob_move) %>%
-      spread(to, prob_move) %>%
-      dplyr::select(-from) %>%
-      as.matrix()
+    #  larval_move_grid <- larv_distance %>%
+    # # #  expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
+    # # #  as.data.frame() %>%
+    # # #  dplyr::mutate(distance = purrr::map2_dbl(from, to, ~ min(
+    # # #    c(abs(.x - .y),
+    # #  #     .x + num_patches - .y,
+    # #   #    num_patches - .x + .y)
+    # #   #))) %>%
+    #   dplyr::mutate(
+    #      larval_movement = ifelse(
+    #        from %in% mpa_locations &
+    #          sprinkler != FALSE,
+    #        fish$larval_movement * sprinkler,
+    #        fish$larval_movement
+    #      )
+    #     )
+    # #
+    # #
+    #  larval_move_grid <-  larval_move_grid %>%
+    #    dplyr::mutate(movement = ifelse(is.finite(
+    #      dnorm(dist, 0, fish$larval_movement)
+    #    ), dnorm(dist, 0, fish$larval_movement), 1))  %>%
+    #    group_by(from) %>%
+    #    dplyr::mutate(prob_move = movement / sum(movement))
+    # #
+    #  larval_move_matrix <- larval_move_grid %>%
+    #    ungroup() %>%
+    #    dplyr::select(from, to, prob_move) %>%
+    #    spread(to, prob_move) %>%
+    #    dplyr::select(-from) %>%
+    #    as.matrix()
 
     # larval_move_grid <-
     #   expand.grid(
@@ -493,9 +539,9 @@ sim_fishery <-
     #   select(-source) %>%
     #   as.matrix()
 
-
     # eventual_f <- fleet$eq_f
     #
+
     # fleet$eq_f <- 0
     for (y in 1:(sim_years - 1)) {
       # Move adults
@@ -515,17 +561,19 @@ sim_fishery <-
           filter(now_year) %>%
           group_by(patch) %>%
           summarise(ssb = sum(ssb)) %>%
-          arrange(patch) %>%
+          dplyr::arrange(patch) %>%
           mutate(depletion = ssb / fish$ssb0) %>%
           mutate(move_rate = pmin(
             fish$adult_movement,
             slope * depletion + (fish$adult_movement * fish$density_movement_modifier)
           )) %>%
-          select(patch, move_rate)
+         dplyr::select(patch, move_rate)
 
-        adult_move_grid <-
-          expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
-          as.data.frame() %>%
+        #See 'movement script
+        adult_move_grid <- adult_distance %>%
+          #expand.grid(from = 1:num_patches, to = 1:num_patches) %>%
+          #as.data.frame() %>%
+
           left_join(how_crowded, by = c("from" = "patch")) %>%
           dplyr::mutate(distance = purrr::map2_dbl(from, to, ~ min(
             c(abs(.x - .y),
@@ -560,13 +608,13 @@ sim_fishery <-
         #   browser()
         # }
       }
-
+### Move fish
       if (num_patches > 1) {
         pop[now_year &
               pop$age > fish$min_age, ] <-
           move_fish(
             pop %>% filter(year == y, age > fish$min_age),
-            fish = fish,
+           fish = fish,
             num_patches = num_patches,
             move_matrix = adult_move_matrix
             # move_matrix = (adult_move_matrix * adult_density_modifier) / rowSums(((adult_move_matrix) * (adult_density_modifier)))
@@ -606,7 +654,7 @@ sim_fishery <-
           #                sim_years = sim_years,
           #                burn_years = burn_years
           # )
-
+ # This is finding hte right cr_ratio
           tuned_cr_ratio <-
             nlminb(
               c(0.3),
@@ -640,7 +688,7 @@ sim_fishery <-
           #     sprinkler = sprinkler,
           #     mpa_habfactor = mpa_habfactor
           #   )
-          tune_costs <- FALSE
+
 
           fleet$max_cr_ratio <- tuned_cr_ratio$par[1]
 
@@ -692,7 +740,9 @@ sim_fishery <-
               expand.grid(year = 1:sim_years, patch = 1:num_patches) %>%
               dplyr::as_data_frame() %>%
               dplyr::left_join(cost_frame, by = "year") %>%
-              dplyr::mutate(cost = cost * (1 + fleet$cost_slope * (patch - 1)))
+              dplyr::left_join(distance_to_shore, by="patch") %>%
+              dplyr::mutate(cost = cost * (1 + fleet$cost_slope * distance))#(pa
+             # dplyr::mutate(cost = cost * (1 + fleet$cost_slope * (patch - 1)))
 
             pop <- pop %>%
               dplyr::select(-cost) %>%
@@ -703,7 +753,7 @@ sim_fishery <-
 
         if (y == (burn_years + 2) &
             fleet$fleet_model == "open-access") {
-          profits <- pop %>%
+            profits <- pop %>%
             filter(year >= (y - (1 + fleet$profit_lags)), year < y) %>%
             group_by(year) %>%
             summarise(profits = sum(profits))
@@ -800,16 +850,18 @@ sim_fishery <-
 
       # if (is.na(spawning_season) | ((((year) - floor(year))/spawning_season) == 1))
       pop$numbers[pop$year == (y + 1) &
-                    pop$age == fish$min_age] <-
+                 pop$age == fish$min_age] <-
         calculate_recruits(
           pop = pop[pop$year == y, ],
           fish = fish,
           num_patches = num_patches,
           phase = model_phase,
-          move_matrix = larval_move_matrix,
+          move_matrix = adult_move_matrix, # This should be larvae move matrix
           rec_devs = rec_devs[y + 1],
           patch_habitat = habitat
         )
+
+
 
 
       if (y == burn_years) {
@@ -825,11 +877,11 @@ sim_fishery <-
         model_phase <- "recruit"
 
         effort[y + 1] <- fleet$initial_effort
-      }
+      } ## Stop here for one year
     }
     rec_mat <- dplyr::data_frame(year = 1:sim_years, rec_dev = rec_devs)
 
-    enviro_mat <- dplyr::data_frame(year = 1:sim_years, enviro = enviro)
+   # enviro_mat <- dplyr::data_frame(year = 1:sim_years, enviro = enviro)
 
     og <- burn_years
     if (keep_burn == TRUE) {
@@ -838,7 +890,7 @@ sim_fishery <-
 
     pop <- pop %>%
       dplyr::left_join(rec_mat, by = "year") %>%
-      dplyr::left_join(enviro_mat, by = "year") %>%
+    #  dplyr::left_join(enviro_mat, by = "year") %>%
       dplyr::filter(year > burn_years, year < max(year)) %>%
       dplyr:: mutate(
         burn = year <= og,
