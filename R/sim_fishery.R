@@ -192,7 +192,7 @@ sim_fishery_az <-
 
 
     sim_years <- burn_years + sim_years
-## Why ?
+
     if (fleet$fleet_model == "supplied-catch") {
       sim_years <- sim_years + 1
     }
