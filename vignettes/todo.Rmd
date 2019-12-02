@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+author: "Lennon Thomas"
+date: "11/27/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## To Do:
+
+* get biological model up and running and code clean for small example
+  *try other bigger example?
+* Play around with parameters make sure I can crash population with easy access
+* Try running at higher spatial resoultion
+* Finalize habitat files
+* Set up input file for life history for alba
+* Finish writing methods
+* set up grid search to 'fit'
+* Add optimization
+* Review Ian's methods
+* Write report intro
+  
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

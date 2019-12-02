@@ -23,11 +23,11 @@ mpasize <- mean(sim$mpa[sim$year > mpayear])
 
 mpasize <- ifelse(is.na(mpasize), 0, mpasize)
 
-ptheme <-  hrbrthemes::theme_ipsum(
-  base_size = font_size,
-  axis_title_size = font_size,
-  strip_text_size = font_size + 2
-)
+# ptheme <-  hrbrthemes::theme_ipsum(
+#   base_size = font_size,
+#   axis_title_size = font_size,
+#   strip_text_size = font_size + 2
+# )
 
 if (type == "patch"){
   out <- sim %>%
@@ -47,8 +47,8 @@ if (type == "patch"){
     geom_line(show.legend = F, size = 1.5) +
     facet_wrap( ~ metric, scales = "free_y") +
     labs(x = "Year",  y = "", caption = "Each line/color represents a patch. Vertical line shows year MPA put in place",
-         title = paste("MPA Size:",scales::percent(mpasize))) +
-    ptheme
+         title = paste("MPA Size:",scales::percent(mpasize)))
+   # ptheme
 
 }
 
@@ -71,13 +71,12 @@ out <- sim %>%
   geom_line(show.legend = F, size = 1.5) +
   facet_wrap( ~ metric, scales = "free_y") +
   labs(x = "Year",  y = "", caption = "Vertical line shows year MPA put in place",
-       title = paste("MPA Size:",scales::percent(mpasize))) +
-  ptheme
+       title = paste("MPA Size:",scales::percent(mpasize)))
+ # ptheme
 
 }
 
 if (type == "doughnut"){
-
 
   out <- sim %>%
     group_by(year, patch) %>%
@@ -104,8 +103,8 @@ if (type == "doughnut"){
     coord_polar() +
     gganimate::transition_time(year) +
     gganimate::ease_aes('linear') +
-    labs(title = 'Year: {frame_time}',x = "'",  y = "Relative Value") +
-    ptheme
+    labs(title = 'Year: {frame_time}',x = "'",  y = "Relative Value")
+ #   ptheme
 }
 
 return(out)

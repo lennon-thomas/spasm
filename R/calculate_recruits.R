@@ -23,7 +23,9 @@ calculate_recruits <-
            patch_habitat = 1,
            phase = 'burn',
            move_matrix,
-           rec_devs = 0) {
+           rec_devs) {
+
+           # rec_devs = 0) {
     if (length(patch_habitat) == 1) {
       patch_habitat <- rep(patch_habitat, num_patches)
 
@@ -116,62 +118,10 @@ calculate_recruits <-
           0.2 * ssb0s * (1 - fish$steepness) +
             (fish$steepness - 0.2) * larvae)
 
-        # mults <- seq(0,4, length.out = 100)
-        # wtf <- rep(NA, 100)
-        # for (i in 1:100){
-        #
-        #   wtf[i] <- sum(0.8 * r0s * fish$steepness * (larvae * mults[i]) / (
-        #     0.2 * ssb0s * (1 - fish$steepness) +
-        #       (fish$steepness - 0.2) * (larvae * mults[i])))
-        #
-        # }
-        #
-        # plot(mults,wtf)
-        # abline(a = fish$r0, b = 0, col = "red")
-        #
-        # browser()
-
-
-
-        # recruits <- ((0.8 * r0s * fish$steepness) / (
-        #     0.2 * ssb0s * (1 - fish$steepness) +
-        #       (fish$steepness - 0.2) * ssb
-        #   )) * mean(ssb)) %>% {
-        #     .$recruits
-        #   }
-        #
-        # recruits <- pop %>%
-        #   group_by(patch) %>%
-        #   summarise(ssb = sum(ssb)) %>%
-        #   mutate(recruits = ((0.8 * r0s * fish$steepness) / (
-        #     0.2 * ssb0s * (1 - fish$steepness) +
-        #       (fish$steepness - 0.2) * ssb
-        #   )) * mean(ssb)) %>% {
-        #     .$recruits
-        #   }
-
       }
 
-      # if (fish$density_dependence_form == 5) {
-      #   # Recruitment is independent in each area, but a fraction of the recruits in each area drift to the adjacent areas before settling
-      #
-      #   recruits <- pop %>%
-      #     group_by(patch) %>%
-      #     summarise(ssb = sum(ssb)) %>%
-      #     mutate(recruits = (0.8 * r0s * fish$steepness * ssb) / (
-      #       0.2 * ssb0s * (1 - fish$steepness) +
-      #         (fish$steepness - 0.2) * ssb
-      #     )) %>% {
-      #       .$recruits
-      #     }
-      #   recruits <- crossprod(recruits, move_matrix)
-      #
-      # }
+ }
+   # recruits <- recruits * exp(rec_devs - fish$sigma_r^2/2); #make sure rec_devs is [1] 0 0 0 0 0 0 0 0 0 0 0
 
-
-    }
-    recruits <- recruits * exp(rec_devs - fish$sigma_r^2/2);
-
-    return(recruits)
-
+      return(recruits)
   }

@@ -7,7 +7,6 @@
 #' @param fish
 #' @param cost
 #' @param beta
-#' @param theta
 #' @param q
 #' @param fleet_model
 #' @param effort_allocation
