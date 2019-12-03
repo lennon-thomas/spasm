@@ -62,7 +62,7 @@ for(i in 1:length(all_cell_no)){
   c<-adult_no[all_cell_no[i]]
   ## Add omit=land to not go through land cells
   d<-gridDistance(adult_no,origin=c,omit=-1)
-  d<-d[ad_cell_no]
+  d<-d[all_cell_no]
   distance_calc<-as.vector(d)
   dmatrix[i,]<-distance_calc
   print(i)

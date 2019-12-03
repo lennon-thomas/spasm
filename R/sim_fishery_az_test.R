@@ -67,10 +67,6 @@ sim_fishery_az_test <-
     tune_costs = FALSE
     hab_qual = hab_qual
 
-    patch_no<-unique(adult_distance$from)
-
-    juve_ad_hab<-c(rep(0,10),rep(1,10)) # vector of 0 for adult habitat and 1 for juvenile habitat
-
 
     msy <- NA
 
@@ -212,15 +208,6 @@ sim_fishery_az_test <-
       sim_years <- sim_years + 1
     }
   # Lookup cell number nad habitat for each patch
-    cell_lookup <- data.frame(matrix(ncol = 3,nrow = num_patches))
-
-    cell_lookup[,1] <- seq(1,num_patches)
-
-    cell_lookup[,2] <- unique(adult_distance$from)
-
-    cell_lookup[,3] <- juve_ad_hab# vector of patches that indicates 0 for adult habitat and 1 for juvenile habitat
-
-    colnames(cell_lookup)<- c("patch","cell_no","juve_ad_hab")
 
    # Creates empty data frame to keep track of all things in each patch,
     pop<-
@@ -448,27 +435,34 @@ sim_fishery_az_test <-
 
 # Distribute R0 and BO by patch -------------------------------------------
 
-    # Distribute R0 and age less than maturity to all juvenile
+    # Distribute R0 evenly throughout juvenile patches
     pop$numbers[pop$year == 1 & pop$juve_ad_hab == 1 & pop$age<fish$age_mature] <- rep(n0_at_age[c(1:round(fish$age_mature))], length(juve_cells))
-    mat_age_pop = pop %>% filter(year == y, age == (round(fish$age_mature,0)-1))
-    total_mat_age_no<-sum(mat_age_pop$numbers,na.rm=TRUE)
-    mat_age_hab_vec<-total_mat_age_no*hab_qual
-    age_mature <- (round(fish$age_mature,0)-1)
+
+    # Calculate how many three year olds present in juvenile habitat and move to adult habitat
+
+     mat_age_pop = pop %>% filter(year == 1, age == (round(fish$age_mature,0)-1))
+
+     total_mat_age_no<-sum(mat_age_pop$numbers,na.rm=TRUE)
+
+     mat_age_hab_vec<-total_mat_age_no*cell_lookup$hab_qual
+
+     age_mature <- (round(fish$age_mature,0)-1)
   #  pop[now_year & pop$age ==(round(fish$age_mature,0)-1), "numbers"]  <- total_mat_age_no * hab_qual
     # Distribute B0 for mature individuals above maturity- evenly throughout cells. need to fix to distribute by habitat quality
 
+  # At the end of this loop there should be numbers at all age for year 1 and age 3+ in adult habitat and ages <3 in juvenile habitat
    for (i in 1:length(ad_cells)) {
-   n0_at_age_patch <- (mat_age_hab_vec[i]) * exp(-fish$m * seq(fish$min_age, fish$max_age, fish$time_step))
-   n0_at_age_patch<- n0_at_age_patch[1:13]
+    # This creates a vector of number of adults in each adult patch. ages 0-2 should be 0 in adult habitat
+   n0_at_age_patch <- append (rep(0,age_mature),(mat_age_hab_vec[i] * exp(-fish$m * seq(fish$min_age, fish$max_age-age_mature, fish$time_step))))
 
-   n0_at_age_patch[fish$max_age - 2] <-
-      n0_at_age_patch[fish$max_age - 2] / (1 - exp(-fish$m))
+   n0_at_age_patch[fish$max_age+1] <-
+      n0_at_age_patch[fish$max_age+1] / (1 - exp(-fish$m))
 
-   b0_at_age <- n0_at_age_patch * fish$weight_at_age [c(age_mature:fish$max_age)]
+   b0_at_age <- n0_at_age_patch * fish$weight_at_age
 
-   ssb0_at_age <- n0_at_age_patch * fish$ssb_at_age[c(age_mature:fish$max_age)]
+   ssb0_at_age <- n0_at_age_patch * fish$ssb_at_age
 
-   pop$numbers[pop$year == 1 & pop$patch == i & pop$juve_ad_hab == 0 & pop$age>=age_mature] <- (n0_at_age_patch)
+   pop$numbers[pop$year == 1 & pop$patch == i & pop$juve_ad_hab == 0] <- (n0_at_age_patch)
 }
     pop$numbers[pop$year == 1  & pop$juve_ad_hab == 1 & pop$age==age_mature]<-0
 
@@ -514,47 +508,20 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
 
 # Calculate Movement ------------------------------------------------------
 
-
+ # This is movement without density
     #See 'movement' script for distance calc of  _distance files
 
-    juve_adult_move_grid <- juve_adult_distance %>%
-        dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
-        is.finite(dnorm(dist, 0, fish$adult_movement)),
-        dnorm(dist, 0, fish$adult_movement),
-        1
-      )))  %>%
-      group_by(from) %>%
-      dplyr::mutate(prob_move = movement / sum(movement, na.rm = TRUE))
-
-
-    juve_adult_move_matrix <- juve_adult_move_grid %>%
-      ungroup() %>%
-      dplyr::select(from, to, prob_move) %>%
-      spread(to, prob_move) %>%
-      dplyr:: select(-from) %>%
-      as.matrix()
-
-    habl<-data.frame(cell_no = c(1:20), hab_q=hab_qual)
-    habl<-habl%>%
-      left_join(cell_lookup,by=c("cell_no"="patch")) %>%
-      dplyr::select(cell_no.y,hab_q)
-    colnames(habl)<-c("cell_no","hab_qual")
 
     adult_move_grid <- adult_distance %>%
-      left_join(habl,by=c("to"="cell_no")) %>%
+      left_join(cell_lookup,by=c("to"="cell_no")) %>%
       dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
         is.finite(dnorm(dist, 0, fish$adult_movement)),
         dnorm(dist, 0, fish$adult_movement),
         1
       ))) %>%
-      #dplyr:: mutate( move2 =  pmin(
-     #     fish$adult_movement,
-    #      slope * hab_qual+ (fish$adult_movement * fish$density_movement_modifier)
-   #     ))  %>%
+
       group_by(from) %>%
       dplyr::mutate(prob_move = movement / sum(movement, na.rm = TRUE))
-                  #  prob_move2 = move2 /sum(move2,na.rm = TRUE))
-
 
 
     adult_move_matrix <- adult_move_grid %>%
@@ -564,7 +531,7 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
       dplyr::select(-from) %>%
       as.matrix()
 
-
+# I don't think adult to juvenile movement (i.e. larval dispersal, matters anymore)
     adult_juve_move_grid <- adult_juve_distance %>%
       dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
         is.finite(dnorm(dist, 0, fish$adult_movement)),
@@ -582,23 +549,6 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
       dplyr:: select(-from) %>%
       as.matrix()
 
- juve_move_grid <- juve_distance %>%
-      dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
-        is.finite(dnorm(dist, 0, fish$adult_movement)),
-        dnorm(dist, 0, fish$adult_movement),
-        1
-      )))  %>%
-      group_by(from) %>%
-      dplyr::mutate(prob_move = movement / sum(movement, na.rm = TRUE))
-
-
- juve_move_matrix <- juve_move_grid %>%
-      ungroup() %>%
-      dplyr::select(from, to, prob_move) %>%
-      spread(to, prob_move) %>%
-      dplyr:: select(-from) %>%
-      as.matrix()
-
 
 # Start looping through years ---------------------------------------------
 
@@ -610,7 +560,7 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
 
 # Include density-dependent movement --------------------------------------
 
-
+# This loop uses depletion rate in each cell to incorporate density dependent  movement in movement matrices
 # Density movement modifier is a parameter that indicates how much density dependence affects movement. Must be between 0 and 1 (?)
 
     if (fish$density_movement_modifier < 1 & y > burn_years) {
@@ -620,23 +570,47 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
 
    # ssb0_patch<-all_ssb0*hab_qual
 
-    how_crowded <- pop %>%
+        how_crowded <- pop %>%
           filter(now_year) %>%
           group_by(patch) %>%
-          summarise(ssb = sum(ssb,na.rm = TRUE)) %>%
+          summarise(ssb = sum(ssb, na.rm = TRUE)) %>%
           dplyr::arrange(patch) %>%
           mutate(depletion = ssb / fish$ssb0) %>%
           mutate(move_rate = pmin(
             fish$adult_movement,
             slope * depletion + (fish$adult_movement * fish$density_movement_modifier)
           )) %>%
-         dplyr::select(patch, move_rate)
+          dplyr::select(patch, move_rate)
 
-how_crowded<-left_join(how_crowded,cell_lookup)
+        how_crowded <- left_join(how_crowded, cell_lookup) %>%
+          dplyr::select(cell_no,move_rate)
 
-        juve_adult_move_grid <- juve_adult_distance %>%
+        adult_distance[is.na(adult_distance)] <- 0
+
+        adult_move_grid <- adult_distance %>%
           left_join(how_crowded, by = c("from" = "cell_no")) %>%
           dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
+            is.finite(dnorm(dist, 0, move_rate)),
+            dnorm(dist, 0, move_rate),
+            1
+          )))  %>%
+          group_by(from) %>%
+          dplyr::mutate(prob_move = movement / sum(movement))
+
+      juve_cell_no  <- cell_lookup[cell_lookup$juve_ad_hab==1,"cell_no"]
+
+        adult_move_grid[adult_move_grid$from %in% juve_cell_no| adult_juve_move_grid$to %in% juve_cell_no,"prob_move"]<-0
+
+        adult_move_matrix <- adult_move_grid %>%
+          ungroup() %>%
+          dplyr::select(from, to, prob_move) %>%
+          spread(to, prob_move) %>%
+          dplyr::select(-from) %>%
+          as.matrix()
+
+       juve_adult_move_grid <- juve_adult_distance %>%
+          left_join(how_crowded, by = c("from" = "cell_no")) %>%
+          dplyr::mutate (movement = ifelse(is.na(dist), NA, ifelse(
             is.finite(dnorm(dist, 0, move_rate)),
             dnorm(dist, 0, move_rate),
             1
@@ -648,100 +622,53 @@ how_crowded<-left_join(how_crowded,cell_lookup)
           ungroup() %>%
           dplyr::select(from, to, prob_move) %>%
           spread(to, prob_move) %>%
-          dplyr:: select(-from) %>%
-          as.matrix()
-
-        #See 'movement' script for distance calc of adult_move_grid
-        adult_distance[is.na(adult_distance)]<-0
-
-         adult_move_grid <- adult_distance %>%
-          left_join(how_crowded, by = c("from" = "cell_no")) %>%
-          dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
-            is.finite(dnorm(dist, 0, move_rate)),
-            dnorm(dist, 0, move_rate),
-            1
-          )))  %>%
-          group_by(from) %>%
-          dplyr::mutate(prob_move = movement / sum(movement))
-
-        adult_move_matrix <- adult_move_grid %>%
-          ungroup() %>%
-          dplyr::select(from, to, prob_move) %>%
-          spread(to, prob_move) %>%
           dplyr::select(-from) %>%
-          as.matrix()
-
-        adult_juve_move_grid <- adult_juve_distance %>%
-          left_join(how_crowded, by = c("from" = "cell_no")) %>%
-          dplyr::mutate (movement = ifelse(is.na(dist), NA, ifelse(
-            is.finite(dnorm(dist, 0, move_rate)),
-            dnorm(dist, 0, move_rate),
-            1
-          )))  %>%
-          group_by(from) %>%
-          dplyr::mutate(prob_move = movement / sum(movement, na.rm = TRUE))
-
-        adult_juve_move_matrix <- adult_juve_move_grid %>%
-          ungroup() %>%
-          dplyr::select(from, to, prob_move) %>%
-          spread(to, prob_move) %>%
-          dplyr:: select(-from) %>%
-          as.matrix()
-
-        juve_move_grid <- juve_distance %>%
-          left_join(how_crowded, by = c("from" = "cell_no")) %>%
-          dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
-            is.finite(dnorm(dist, 0, move_rate)),
-            dnorm(dist, 0, move_rate),
-            1
-          )))  %>%
-          group_by(from) %>%
-          dplyr::mutate(prob_move = movement / sum(movement, na.rm = TRUE))
-
-
-        juve_move_matrix <- juve_move_grid %>%
-          ungroup() %>%
-          dplyr::select(from, to, prob_move) %>%
-          spread(to, prob_move) %>%
-          dplyr:: select(-from) %>%
           as.matrix()
 
   }
 
+if (y > 1){
 
+  # Move age 3 from juvenile to adult habitat cells
+
+  juve_adult_move_matrix[is.na(juve_adult_move_matrix)]<-0
+
+  pop$numbers[is.na(pop$numbers)]<-0
+
+  total_mat<-sum(pop %>% filter(year == y, age == (round(fish$age_mature,0)-1)) %>% dplyr::select(numbers))
+
+
+     pop[now_year &
+              pop$age ==(round(fish$age_mature,0)-1),] <-pop[now_year &
+                                                               pop$age ==(round(fish$age_mature,0)-1),] %>%
+       group_by(age) %>%
+       mutate(
+       numbers = total_mat*cell_lookup$hab_qual) %>%
+       ungroup
+
+  # Move Adults around in adult habitat
+
+  adult_move_matrix[is.na(adult_move_matrix)]<-0
+  pop$numbers[is.na(pop$numbers)]<-0
+
+  pop[now_year &
+        pop$age > (round(fish$age_mature,0)-1), ] <-# change to mat age
+    move_fish(
+      here_pop = pop %>% filter(year == y, age > (round(fish$age_mature,0)-1)),
+      fish = fish,
+      num_patches = num_patches,
+      move_matrix = adult_move_matrix
+    )
+
+
+
+}
 # Move different age classes ----------------------------------------------
 
 # Age three just sum all individuals at age 3 and move them from juvenile to adult habitat based on adult habitat quality
-   #   mat_age_pop = pop %>% filter(year == y, age == (round(fish$age_mature,0)-1))
-    # total_mat_age_no<-sum(mat_age_pop$numbers,na.rm=TRUE)
-     # pop[now_year & pop$age ==(round(fish$age_mature,0)-1), "numbers"]  <- total_mat_age_no * hab_qual
 
   # Move 3 year olds (age at mat) from juvenile to adult habitat. # of adults per cell is different..is this because of SSB0 of patch? or just distance?
-#juve_adult_move_matrix[is.na(juve_adult_move_matrix)]<-0
-
-#pop$numbers[is.na(pop$numbers)]<-0
-
- #        pop[now_year &
-  #            pop$age ==(round(fish$age_mature,0)-1), ] <-# change to mat age
-   #         move_fish(
-    #        here_pop = pop %>% filter(year == y, age == (round(fish$age_mature,0)-1)),
-     #       fish = fish,
-      #      num_patches = num_patches,
-       #     move_matrix = juve_adult_move_matrix
-        #  )
-## Now move adults around in adult habitats
-
-# adult_move_matrix[is.na(adult_move_matrix)]<-0
-#
-#        pop[now_year &
-#                pop$age > (round(fish$age_mature,0)-1), ] <-# change to mat age
-#            move_fish(
-#              here_pop = pop %>% filter(year == y, age > (round(fish$age_mature,0)-1)),
-#              fish = fish,
-#              num_patches = num_patches,
-#              move_matrix = adult_move_matrix
-#            )
-
+#j
 
 
 # Add MPA -----------------------------------------------------------------
@@ -779,7 +706,8 @@ how_crowded<-left_join(how_crowded,cell_lookup)
               c(0.3),
               estimate_costs,
               fish = fish,
-              fleet = 0.9,
+              fleet = fleet,
+              b_ref_oa = fleet$b_ref_oa,
               lower = c(1e-3,1e-3),
               upper = c(0.95,10),
               lags = fleet$profit_lags,
@@ -905,10 +833,12 @@ how_crowded<-left_join(how_crowded,cell_lookup)
 
 
 # Growth and Mortality ----------------------------------------------------
+      pop$numbers[is.na(pop$numbers)]<-0
+      pop$f[is.na(pop$f)]<-0
 
-      pop[pop$year == (y + 1), "numbers"] <-
+       pop[pop$year == (y + 1), "numbers"]  <-
         pop[now_year, ] %>%
-        group_by(patch) %>%
+        dplyr::group_by(patch) %>%
         dplyr::mutate(numbers = grow_and_die(
           numbers = numbers,
           f = f,
@@ -958,7 +888,7 @@ how_crowded<-left_join(how_crowded,cell_lookup)
       #Model phase is 'burn here so it skips calculating recruits and jumps down to calculate ssb0
       adult_juve_move_matrix[is.na(adult_juve_move_matrix)]<-0
       juve_move_matrix[is.na(juve_move_matrix)]<-0
-
+# Don't need move matrix if re
        pop$numbers[pop$year == (y + 1) &
                     pop$age == fish$min_age] <-
         calculate_recruits(
@@ -967,7 +897,7 @@ how_crowded<-left_join(how_crowded,cell_lookup)
           num_patches = num_patches,
           phase = model_phase,
           move_matrix = adult_juve_move_matrix,
-          patch_habitat = habitat
+          patch_habitat = cell_lookup$juve_ad_hab
         )
 
 

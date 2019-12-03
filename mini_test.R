@@ -15,13 +15,17 @@ juve_adult_distance<-read.csv(paste0(boxdir,runname,"/juve_adult_distance.csv"))
 adult_juve_distance<-read.csv(paste0(boxdir,runname,"/adult_juve_distance.csv"))
 juve_distance<-read.csv(paste0(boxdir,runname,"/juve_distance.csv"))
 shore_dist<-read.csv(paste0(boxdir,runname,"/distance_to_shore.csv"))
-cell_lookup<-data.frame(matrix(ncol=3,nrow=20))
+
+hab_qual<-c(.5,.05,.05,.05,0.05,0.05,0.05,0.05,0.05,.1,rep(0,10))
+num_patches<-length(unique(adult_distance$from))
+# Create dataframe that has cell_no, patch_no, whether juve or adult, and habitat quality
+cell_lookup<-data.frame(matrix(ncol=4,nrow=num_patches))
 cell_lookup[,1]<-c(1:20)
 cell_lookup[,2]<-unique(adult_distance$from)
 cell_lookup[,3]<-c(rep(0,10),rep(1,10))
-colnames(cell_lookup)<-c("patch","cell_no","juve_ad_hab")
-
-hab_qual<-c(.5,.05,.05,.05,0.05,0.05,0.05,0.05,0.05,.1,rep(0,10)) # Adult habitat quality
+cell_lookup[,4]<- hab_qual<-c(.5,.05,.05,.05,0.05,0.05,0.05,0.05,0.05,.1,rep(0,10))
+colnames(cell_lookup)<-c("patch","cell_no","juve_ad_hab","hab_qual")
+ # Adult habitat quality
 
 fish <-
   create_fish(
@@ -58,7 +62,7 @@ fleet <- create_fleet(
   q_slope = 0,
   #eq_f = .1,
   b_ref_oa = 0.25,#0.25,
-  max_cr_ratio = 0.75, ## this is cost revene ratio- the higher the number the higher the costs.  this is how you change economics.
+  max_cr_ratio = 0.001, ## this is cost revene ratio- the higher the number the higher the costs.  this is how you change economics.
   fleet_model = "open-access",
   sigma_effort = 0.1,
   length_50_sel = 0.1 * fish$linf,
@@ -80,7 +84,7 @@ system.time(simple <- sim_fishery_az_test(
   manager = create_manager(mpa_size = 0, year_mpa = 100),
   num_patches = 20,
   sim_years = 20,
-  burn_years = 50,
+  burn_years = 100,
   time_step = fish$time_step,
   #est_msy = FALSE,
   random_mpas =TRUE,
