@@ -24,7 +24,7 @@ sim_fishery_az_test <-
            manager,
            num_patches, #10,
            sim_years, #1,
-           burn_years,
+           burn_years=10,
            crashed_pop = 1e-3,
            random_mpas,
            enviro = NA,
@@ -45,27 +45,27 @@ sim_fishery_az_test <-
            shore_dist,
            hab_qual) {
 # # #
-    fish = fish
-    fleet = fleet
-    manager = create_manager(mpa_size = 0, year_mpa = 100)
-    num_patches = 20
-    sim_years = 20
-    burn_years = 1
-    time_step = fish$time_step
-    #est_msy = FALSE,
-    random_mpas =TRUE
-    min_size = 0.05
-    mpa_habfactor = 1
-    sprinkler = TRUE
-    keep_burn = TRUE
-    adult_distance = adult_distance
-    juve_adult_distance = juve_adult_distance
-    adult_juve_distance = adult_juve_distance
-    juve_distance = juve_distance
-    shore_dist = shore_dist
-    rec_driver = "stochastic"
-    tune_costs = FALSE
-    hab_qual = hab_qual
+   # fish = fish
+   # fleet = fleet
+   # manager = create_manager(mpa_size = 0, year_mpa = 100)
+   # num_patches = 20
+   # sim_years = 20
+   # burn_years = 10
+   # time_step = fish$time_step
+   # #est_msy = FALSE,
+   # random_mpas =TRUE
+   # min_size = 0.05
+   # mpa_habfactor = 1
+   # sprinkler = TRUE
+   # keep_burn = TRUE
+   # adult_distance = adult_distance
+   # juve_adult_distance = juve_adult_distance
+   # adult_juve_distance = adult_juve_distance
+   # juve_distance = juve_distance
+   # shore_dist = shore_dist
+   # rec_driver = "stochastic"
+   # tune_costs = FALSE
+   # hab_qual = hab_qual
 
 
     msy <- NA
@@ -436,17 +436,17 @@ sim_fishery_az_test <-
 # Distribute R0 and BO by patch -------------------------------------------
 
     # Distribute R0 evenly throughout juvenile patches
-    pop$numbers[pop$year == 1 & pop$juve_ad_hab == 1 & pop$age<fish$age_mature] <- rep(n0_at_age[c(1:round(fish$age_mature))], length(juve_cells))
+    pop$numbers[pop$year == 1 & pop$juve_ad_hab == 1 & pop$age<=fish$age_mature] <- rep(n0_at_age[c(1:(fish$age_mature+1))], length(juve_cells))
 
     # Calculate how many three year olds present in juvenile habitat and move to adult habitat
 
-     mat_age_pop = pop %>% filter(year == 1, age == (round(fish$age_mature,0)-1))
+     mat_age_pop = pop %>% filter(year == 1, age == fish$age_mature)
 
      total_mat_age_no<-sum(mat_age_pop$numbers,na.rm=TRUE)
 
      mat_age_hab_vec<-total_mat_age_no*cell_lookup$hab_qual
 
-     age_mature <- (round(fish$age_mature,0)-1)
+     age_mature <- fish$age_mature
   #  pop[now_year & pop$age ==(round(fish$age_mature,0)-1), "numbers"]  <- total_mat_age_no * hab_qual
     # Distribute B0 for mature individuals above maturity- evenly throughout cells. need to fix to distribute by habitat quality
 
@@ -579,15 +579,15 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
           mutate(move_rate = pmin(
             fish$adult_movement,
             slope * depletion + (fish$adult_movement * fish$density_movement_modifier)
-          )) %>%
-          dplyr::select(patch, move_rate)
+          )) #%>%
+    #      dplyr::select(patch, move_rate)
 
         how_crowded <- left_join(how_crowded, cell_lookup) %>%
           dplyr::select(cell_no,move_rate)
 
         adult_distance[is.na(adult_distance)] <- 0
 
-        adult_move_grid <- adult_distance %>%
+        adult_move_grid<- adult_distance %>%
           left_join(how_crowded, by = c("from" = "cell_no")) %>%
           dplyr::mutate(movement = ifelse(is.na(dist), NA, ifelse(
             is.finite(dnorm(dist, 0, move_rate)),
@@ -625,36 +625,34 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
           dplyr::select(-from) %>%
           as.matrix()
 
-  }
+}
+# Move different age classes ----------------------------------------------
 
-if (y > 1){
+# Age three just sum all individuals at age 3 and move them from juvenile to adult habitat based on adult habitat quality
 
-  # Move age 3 from juvenile to adult habitat cells
-
-  juve_adult_move_matrix[is.na(juve_adult_move_matrix)]<-0
-
-  pop$numbers[is.na(pop$numbers)]<-0
-
-  total_mat<-sum(pop %>% filter(year == y, age == (round(fish$age_mature,0)-1)) %>% dplyr::select(numbers))
+  # Move 4 year olds (age at mat) from juvenile to adult habitat. # of adults per cell is different..is this because of SSB0 of patch? or just distance?
 
 
-     pop[now_year &
-              pop$age ==(round(fish$age_mature,0)-1),] <-pop[now_year &
-                                                               pop$age ==(round(fish$age_mature,0)-1),] %>%
-       group_by(age) %>%
-       mutate(
-       numbers = total_mat*cell_lookup$hab_qual) %>%
-       ungroup
 
-  # Move Adults around in adult habitat
+  total_mat<-sum(pop %>% filter(year == y, age == fish$age_mature) %>% dplyr::select(numbers))
+
+
+  pop[now_year &
+        pop$age ==(fish$age_mature),] <-pop[now_year &
+                                                         pop$age ==fish$age_mature,] %>%
+    group_by(age) %>%
+    mutate(
+      numbers = total_mat*cell_lookup$hab_qual) %>%
+    ungroup ()
+
 
   adult_move_matrix[is.na(adult_move_matrix)]<-0
   pop$numbers[is.na(pop$numbers)]<-0
 
   pop[now_year &
-        pop$age > (round(fish$age_mature,0)-1), ] <-# change to mat age
+        pop$age > (round(fish$age_mature,0)), ] <-# change to mat age
     move_fish(
-      here_pop = pop %>% filter(year == y, age > (round(fish$age_mature,0)-1)),
+      here_pop = pop %>% filter(year == y, age > fish$age_mature),
       fish = fish,
       num_patches = num_patches,
       move_matrix = adult_move_matrix
@@ -662,13 +660,6 @@ if (y > 1){
 
 
 
-}
-# Move different age classes ----------------------------------------------
-
-# Age three just sum all individuals at age 3 and move them from juvenile to adult habitat based on adult habitat quality
-
-  # Move 3 year olds (age at mat) from juvenile to adult habitat. # of adults per cell is different..is this because of SSB0 of patch? or just distance?
-#j
 
 
 # Add MPA -----------------------------------------------------------------
@@ -887,7 +878,6 @@ if (y > 1){
       # if (is.na(spawning_season) | ((((year) - floor(year))/spawning_season) == 1))
       #Model phase is 'burn here so it skips calculating recruits and jumps down to calculate ssb0
       adult_juve_move_matrix[is.na(adult_juve_move_matrix)]<-0
-      juve_move_matrix[is.na(juve_move_matrix)]<-0
 # Don't need move matrix if re
        pop$numbers[pop$year == (y + 1) &
                     pop$age == fish$min_age] <-

@@ -175,7 +175,7 @@ create_fish <- function(common_name = 'white seabass',
 
     if (is.na(age_mature)){
 
-      age_mature <- fish_life$tm
+      age_mature <- round(fish_life$tm,0)
 
     }
 
@@ -236,7 +236,7 @@ create_fish <- function(common_name = 'white seabass',
   # process maturity
   if ((is.na(age_50_mature) |
        is.na(age_95_mature)) & is.na(age_mature) == F) {
-    age_50_mature <- age_mature
+    age_50_mature <- round(age_mature,0)
 
     age_95_mature <-  age_50_mature + delta_mature
 

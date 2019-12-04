@@ -36,12 +36,12 @@ fish <-
     cv_len = 0,
     sigma_r = 0.00,
     steepness = 0.8,
-    r0 = 20000,#10972.933*1000, #trying to get to K from best Jabba run
+    r0 = 200000,#10972.933*1000, #trying to get to K from best Jabba run
     rec_ac = 0,
-    adult_movement = 200,
+    adult_movement = 20,
     larval_movement = 2000,
     density_dependence_form = 2,
-    density_movement_modifier =  0.2,
+    density_movement_modifier =  0.5,
     price = 940,
     price_cv = 0,
     price_ac = 0,
@@ -62,7 +62,7 @@ fleet <- create_fleet(
   q_slope = 0,
   #eq_f = .1,
   b_ref_oa = 0.25,#0.25,
-  max_cr_ratio = 0.001, ## this is cost revene ratio- the higher the number the higher the costs.  this is how you change economics.
+  max_cr_ratio = 0.8, ## this is cost revene ratio- the higher the number the higher the costs.  this is how you change economics.
   fleet_model = "open-access",
   sigma_effort = 0.1,
   length_50_sel = 0.1 * fish$linf,
@@ -83,8 +83,8 @@ system.time(simple <- sim_fishery_az_test(
   fleet = fleet,
   manager = create_manager(mpa_size = 0, year_mpa = 100),
   num_patches = 20,
-  sim_years = 20,
-  burn_years = 100,
+  sim_years = 0,
+  burn_years = 50,
   time_step = fish$time_step,
   #est_msy = FALSE,
   random_mpas =TRUE,
