@@ -84,6 +84,27 @@ create_fish <- function(common_name = 'white seabass',
                         density_movement_modifier = 1,
                         linf_buffer = 1.2) {
 
+  scientific_name = "Pagellus bogaraveo"
+  query_fishlife = T
+  mat_mode = "length"
+  time_step = 1
+  cv_len = 0
+  sigma_r = 0.00
+  steepness = 0.8
+  r0 = 200000#10972.933*1000, #trying to get to K from best Jabba run
+  rec_ac = 0
+  adult_movement = 20
+  larval_movement = 2000
+  density_dependence_form = 2
+  density_movement_modifier =  0.5
+  price = 940
+  price_cv = 0
+  price_ac = 0
+  price_slope =  0.0001
+  tune_weight = FALSE
+  default_wb = 2.8
+
+
 
   fish <- list()
   # check fishbase -------------
@@ -98,10 +119,11 @@ create_fish <- function(common_name = 'white seabass',
       dplyr::mutate(life_traits = pmap(list(Genus = genus, Species = species), safely(Get_traits)))
 
     fish_life <- fish_life %>%
+
       dplyr::mutate(fish_life_worked = purrr::map(life_traits, 'error') %>% map_lgl(is.null)) %>%
       dplyr::filter(fish_life_worked) %>%
       dplyr::mutate(life_traits = purrr::map(life_traits, 'result')) %>%
-      tidyr::unnest() %>%
+      tidyr::unnest(cols=c(life_traits)) %>%
       dplyr::mutate(taxa = glue::glue('{genus} {species}')) %>%
       rlang::set_names(tolower)
 

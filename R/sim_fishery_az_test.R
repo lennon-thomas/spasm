@@ -43,7 +43,8 @@ sim_fishery_az_test <-
            adult_juve_distance,
            juve_distance,
            shore_dist,
-           hab_qual) {
+           hab_qual,
+           effort_c) {
 # # #
    # fish = fish
    # fleet = fleet
@@ -68,15 +69,15 @@ sim_fishery_az_test <-
    # hab_qual = hab_qual
 
 
-    msy <- NA
+   # msy <- NA
 
-    p_msy <- NA
+  #  p_msy <- NA
 
-    e_msy <- NA
+   # e_msy <- NA
 
-    max_r_msy <-  NA
+  #  max_r_msy <-  NA
 
-    b0 <- NA
+   # b0 <- NA
 
   # What is this doing
     if (sprinkler == FALSE & mpa_habfactor == 1){
@@ -368,7 +369,7 @@ sim_fishery_az_test <-
       generate_timeseries(
         fleet$q,
         cv = fleet$q_cv,
-        ac = fleet$q_ac,
+       ac = fleet$q_ac,
         percent_slope = fleet$q_slope,
         time = sim_years
       )
@@ -383,40 +384,40 @@ sim_fishery_az_test <-
 
 #  Tune costs based on some heavy fishing at b0 ---------------------------
 
-    hyp_f <- fish$m #hypothetical f
-
-    hyp_effort <- hyp_f / mean(q[(burn_years + 1):sim_years])
-
-    hyp_f_at_age <- hyp_f * fleet$sel_at_age
-
-    hyp_b0_catch <-
-      sum((hyp_f_at_age / (hyp_f_at_age + fish$m))  * b0_at_age * (1 - exp(-(
-        hyp_f_at_age + fish$m
-      ))))
-
-    b0_revenue <-
-      mean(price_series[(burn_years + 1):sim_years]) * hyp_b0_catch
-
-    hyp_profits_guess <- b0_revenue * (1 - fleet$max_cr_ratio)
-
-    cost_guess <-
-      (b0_revenue - hyp_profits_guess) / hyp_effort ^ fleet$beta
-
-    fleet$theta <-
-      (fleet$max_perc_change_f * hyp_effort) / (hyp_profits_guess / hyp_effort)
+    # hyp_f <- fish$m #hypothetical f
+    #
+    # hyp_effort <- hyp_f / mean(q[(burn_years + 1):sim_years])
+    #
+    # hyp_f_at_age <- hyp_f * fleet$sel_at_age
+    #
+    # hyp_b0_catch <-
+    #   sum((hyp_f_at_age / (hyp_f_at_age + fish$m))  * b0_at_age * (1 - exp(-(
+    #     hyp_f_at_age + fish$m
+    #   ))))
+    #
+    # b0_revenue <-
+    #   mean(price_series[(burn_years + 1):sim_years]) * hyp_b0_catch
+    #
+    # hyp_profits_guess <- b0_revenue * (1 - fleet$max_cr_ratio)
+    #
+    # cost_guess <-
+    #   (b0_revenue - hyp_profits_guess) / hyp_effort ^ fleet$beta
+    #
+    # fleet$theta <-
+    #   (fleet$max_perc_change_f * hyp_effort) / (hyp_profits_guess / hyp_effort)
 
     cost_series <-
       generate_timeseries(
-        cost_guess,
+        fleet$cost,
         cv = fleet$cost_cv,
-        ac = fleet$cost_ac,
+       ac = fleet$cost_ac,
         percent_slope = fleet$cost_slope,
         time = sim_years
       )
 
-    cost_series <- (cost_series / max(cost_series)) * cost_guess
+  #  cost_series <- (cost_series / max(cost_series)) * cost_guess
 
-    fleet$cost <- cost_guess
+   # fleet$cost <- cost_guess
 
 
     price_frame <-
@@ -597,7 +598,7 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
           group_by(from) %>%
           dplyr::mutate(prob_move = movement / sum(movement))
 
-      juve_cell_no  <- cell_lookup[cell_lookup$juve_ad_hab==1,"cell_no"]
+        juve_cell_no  <- cell_lookup[cell_lookup$juve_ad_hab==1,"cell_no"]
 
         adult_move_grid[adult_move_grid$from %in% juve_cell_no| adult_juve_move_grid$to %in% juve_cell_no,"prob_move"]<-0
 
@@ -689,87 +690,87 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
          b0 <- sum(pop$biomass[pop$year == burn_years])
 
   # Tune costs to OA conditions and a given B over BO. It finds the right CR ratio
-          if (fleet$fleet_model == "open-access" &
-            tune_costs == TRUE) {
-
-          tuned_cr_ratio <-
-            nlminb(
-              c(0.3),
-              estimate_costs,
-              fish = fish,
-              fleet = fleet,
-              b_ref_oa = fleet$b_ref_oa,
-              lower = c(1e-3,1e-3),
-              upper = c(0.95,10),
-              lags = fleet$profit_lags,
-              num_patches = num_patches,
-              sim_years = sim_years,
-              burn_years = burn_years,
-              sprinkler = sprinkler,
-              mpa_habfactor = mpa_habfactor
-            )
-
-
-          fleet$max_cr_ratio <- tuned_cr_ratio$par[1]
-
-          # fleet$max_perc_change_f <- tuned_cr_ratio$par[2]
-
-          hyp_f <- fish$m #hypothetical f
-
-          hyp_effort <- hyp_f / mean(q[(burn_years + 1):sim_years])
-
-          hyp_f_at_age <- hyp_f * fleet$sel_at_age
-
-          hyp_b0_catch <-
-            sum((hyp_f_at_age / (hyp_f_at_age + fish$m))  * b0_at_age * (1 - exp(-(
-              hyp_f_at_age + fish$m
-            ))))
-
-          b0_revenue <-
-            mean(price_series[(burn_years + 1):sim_years]) * hyp_b0_catch
-
-          hyp_profits_guess <- b0_revenue * (1 - fleet$max_cr_ratio)
-
-          cost_guess <-
-            (b0_revenue - hyp_profits_guess) / hyp_effort ^ fleet$beta
-
-          fleet$theta <-
-            (fleet$max_perc_change_f * hyp_effort) / (hyp_profits_guess / hyp_effort)
-## cost is increasing through time, but also variable (cv- varioation around trend. but varation is autocorrelated. so likely to be related to variation from cost before)
-          cost_series <-
-            generate_timeseries(
-              cost_guess,
-              cv = fleet$cost_cv,
-              ac = fleet$cost_ac,
-              percent_slope = fleet$cost_slope,
-              time = sim_years
-            )
-
-          cost_series <- (cost_series / max(cost_series)) * cost_guess
-
-          fleet$cost <- cost_guess
-
-          cost_frame <- dplyr::data_frame(year = 1:sim_years, cost = cost_series)
-
-          pop <- pop %>%
-            dplyr::select(-cost) %>%
-            dplyr::left_join(cost_frame, by = "year")
-
-          if (fleet$cost_function == "distance from port") {
-            cost_frame <-
-              expand.grid(year = 1:sim_years, patch = 1:num_patches) %>%
-              dplyr::as_data_frame() %>%
-              dplyr::left_join(cost_frame, by = "year") %>%
-              dplyr::left_join(distance_to_shore, by="patch") %>%
-              dplyr::mutate(cost = cost * (1 + fleet$cost_slope * distance))#(pa
-             # dplyr::mutate(cost = cost * (1 + fleet$cost_slope * (patch - 1)))
-
-            pop <- pop %>%
-              dplyr::select(-cost) %>%
-              dplyr::left_join(cost_frame, by = c("patch", "year"))
-          }
-
-        }
+#           if (fleet$fleet_model == "open-access" &
+#             tune_costs == TRUE) {
+#
+#           tuned_cr_ratio <-
+#             nlminb(
+#               c(0.3),
+#               estimate_costs,
+#               fish = fish,
+#               fleet = fleet,
+#               b_ref_oa = fleet$b_ref_oa,
+#               lower = c(1e-3,1e-3),
+#               upper = c(0.95,10),
+#               lags = fleet$profit_lags,
+#               num_patches = num_patches,
+#               sim_years = sim_years,
+#               burn_years = burn_years,
+#               sprinkler = sprinkler,
+#               mpa_habfactor = mpa_habfactor
+#             )
+#
+#
+#           fleet$max_cr_ratio <- tuned_cr_ratio$par[1]
+#
+#           # fleet$max_perc_change_f <- tuned_cr_ratio$par[2]
+#
+#           hyp_f <- fish$m #hypothetical f
+#
+#           hyp_effort <- hyp_f / mean(q[(burn_years + 1):sim_years])
+#
+#           hyp_f_at_age <- hyp_f * fleet$sel_at_age
+#
+#           hyp_b0_catch <-
+#             sum((hyp_f_at_age / (hyp_f_at_age + fish$m))  * b0_at_age * (1 - exp(-(
+#               hyp_f_at_age + fish$m
+#             ))))
+#
+#           b0_revenue <-
+#             mean(price_series[(burn_years + 1):sim_years]) * hyp_b0_catch
+#
+#           hyp_profits_guess <- b0_revenue * (1 - fleet$max_cr_ratio)
+#
+#           cost_guess <-
+#             (b0_revenue - hyp_profits_guess) / hyp_effort ^ fleet$beta
+#
+#           fleet$theta <-
+#             (fleet$max_perc_change_f * hyp_effort) / (hyp_profits_guess / hyp_effort)
+# ## cost is increasing through time, but also variable (cv- varioation around trend. but varation is autocorrelated. so likely to be related to variation from cost before)
+#           cost_series <-
+#             generate_timeseries(
+#               cost_guess,
+#               cv = fleet$cost_cv,
+#               ac = fleet$cost_ac,
+#               percent_slope = fleet$cost_slope,
+#               time = sim_years
+#             )
+#
+#           cost_series <- (cost_series / max(cost_series)) * cost_guess
+#
+#           fleet$cost <- cost_guess
+#
+#           cost_frame <- dplyr::data_frame(year = 1:sim_years, cost = cost_series)
+#
+#           pop <- pop %>%
+#             dplyr::select(-cost) %>%
+#             dplyr::left_join(cost_frame, by = "year")
+#
+#           if (fleet$cost_function == "distance from port") {
+#             cost_frame <-
+#               expand.grid(year = 1:sim_years, patch = 1:num_patches) %>%
+#               dplyr::as_data_frame() %>%
+#               dplyr::left_join(cost_frame, by = "year") %>%
+#               dplyr::left_join(distance_to_shore, by="patch") %>%
+#               dplyr::mutate(cost = cost * (1 + fleet$cost_slope * distance))#(pa
+#              # dplyr::mutate(cost = cost * (1 + fleet$cost_slope * (patch - 1)))
+#
+#             pop <- pop %>%
+#               dplyr::select(-cost) %>%
+#               dplyr::left_join(cost_frame, by = c("patch", "year"))
+#           }
+#
+#         }
 
         if (y == (burn_years + 2) &
             fleet$fleet_model == "open-access") {
@@ -785,19 +786,19 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
         previous_max <-
           ifelse(y > (burn_years + 1), max(effort[max(1, (y - 1 - max_window)):(y - 1)]), fleet$initial_effort)
 
-        effort[y] <- determine_effort(
-          last_effort = ifelse(y > (burn_years + 1), effort[y - 1], fleet$initial_effort),
-          fleet = fleet,
-          fish = fish,
-          y = y,
-          burn_years = burn_years,
-          pop = pop,
-          mpa = mpa,
-          num_patches = num_patches,
-          effort_devs = effort_devs,
-          profit_lags = fleet$profit_lags,
-          previous_max = previous_max
-        )
+         effort[y] <- effort_c
+        #   last_effort = ifelse(y > (burn_years + 1), effort[y - 1], fleet$initial_effort),
+        #   fleet = fleet,
+        #   fish = fish,
+        #   y = y,
+        #   burn_years = burn_years,
+        #   pop = pop,
+        #   mpa = mpa,
+        #   num_patches = num_patches,
+        #   effort_devs = effort_devs,
+        #   profit_lags = fleet$profit_lags,
+        #   previous_max = previous_max
+        # )
 
       }
 
@@ -862,7 +863,7 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
         }
 
       pop <- pop %>%
-        dplyr::mutate(patch_age_costs = ((cost) * (effort) ^ fleet$beta) / fish$max_age) %>% # divide costs up among each age class
+        dplyr::mutate(patch_age_costs = ((cost) * (effort)) / fish$max_age) %>% # divide costs up among each age class
         dplyr::mutate(
           ssb = numbers * ssb_at_age,
           biomass = numbers * weight_at_age,
@@ -925,8 +926,8 @@ colnames(distance_to_shore)<-c("cell_no","distance","patch")
       dplyr::mutate(
         burn = year <= og,
         eventual_mpa = patch %in% mpa_locations,
-        msy = msy,
-        e_msy = e_msy,
+      #  msy = msy,
+       # e_msy = e_msy,
         b0 = b0
       )
 

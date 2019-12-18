@@ -1,13 +1,15 @@
-test
+
 library(tidyverse)
 library(FishLife)
 library(spasm)
 library(ggridges)
 library(gganimate)
 library(raster)
-source('../R/sim_fishery_az.R',local=FALSE,echo=FALSE)
-source('../R/plot-spasm.R',local=FALSE,echo=FALSE)
-boxdir<-"/Users/lennonthomas/Box Sync/SFG Centralized Resources/Projects/BPC/Azores/data/bsb_model/"
+source('~/GitHub/spasm/R/sim_fishery_az_test.R')
+source('~/GitHub/spasm/R/plot-spasm.R')
+source('~/GitHub/spasm/R/Get_traits.R')
+source('~/GitHub/spasm/R/create_fish.R')
+boxdir<-"/Users/lennonrosethomas/Box Sync/SFG Centralized Resources/Projects/BPC/Azores/data/bsb_model/"
 runname<-"test"
 
 juve_distance<-read.csv(paste0(boxdir,runname,"/juve_distance.csv"))
@@ -47,7 +49,6 @@ fish <-
     price_cv = 0,
     price_ac = 0,
     price_slope =  0.0001
-
   )
 
 
@@ -64,14 +65,14 @@ fleet <- create_fleet(
   #eq_f = .1,
   b_ref_oa = 0.25,#0.25,
   max_cr_ratio = 0.8, ## this is cost revene ratio- the higher the number the higher the costs.  this is how you change economics.
-  fleet_model = "open-access",
-  sigma_effort = 0.1,
+  fleet_model = "constant effort",
+  sigma_effort = 0.0,
   length_50_sel = 0.1 * fish$linf,
   initial_effort = 0,#.002,
   beta = 1,
 #  theta = 1e-1,
   max_perc_change_f = 2,
-  effort_allocation = "profit-gravity", #"gravity", #'simple',
+  effort_allocation = "simple", #"gravity", #'simple',
   mpa_reaction = "leave",#"leave", #"leave"
   profit_lags = 10, # This is how sensitive fleet is to changes in profit. Do the respond on annual basis vs. 5 year average.
   cost_function = "distance to port")
@@ -84,8 +85,8 @@ system.time(simple <- sim_fishery_az_test(
   fleet = fleet,
   manager = create_manager(mpa_size = 0, year_mpa = 100),
   num_patches = 20,
-  sim_years = 0,
-  burn_years = 50,
+  sim_years = 20,
+  burn_years = 5,
   time_step = fish$time_step,
   #est_msy = FALSE,
   random_mpas =TRUE,
@@ -100,7 +101,8 @@ system.time(simple <- sim_fishery_az_test(
   shore_dist = shore_dist,
   hab_qual = hab_qual,
   rec_driver = "stochastic",
-  tune_costs = FALSE
+  tune_costs = FALSE,
+  effort_c=10 #constant annual value of effort to be distributed to all patches
 ))
 
 #During sim- pop in all adult and juve patches are the same?
